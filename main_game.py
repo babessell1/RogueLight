@@ -65,7 +65,7 @@ class obj_Actor:
             #print(constants.SCREEN_HEIGHT/2*constants.CELL_HEIGHT)
             SURFACE_MAIN.blit(self.sprite, (constants.SCREEN_WIDTH/2*constants.CELL_WIDTH, constants.SCREEN_HEIGHT/2*constants.CELL_HEIGHT) )
         else:
-            if FOV_MAP[self.y,self.x]==True:
+            if FOV_MAP[self.y,self.x]>0:
                 rx = self.x - GAME_OBJECTS["PLAYER"].x
                 ry = self.y - GAME_OBJECTS["PLAYER"].y
                 SURFACE_MAIN.blit(self.sprite, ( (rx+constants.SCREEN_WIDTH/2)*constants.CELL_WIDTH, (ry+constants.SCREEN_HEIGHT/2)*constants.CELL_HEIGHT) )
@@ -97,7 +97,7 @@ class obj_Spell:
     def draw(self):
         #print(self.x, GAME_OBJECTS["PLAYER"].x)
         #print(self.y, GAME_OBJECTS["PLAYER"].y)
-        if FOV_MAP[self.y,self.x]==True:
+        if FOV_MAP[self.y,self.x]>0:
             rx = self.x - GAME_OBJECTS["PLAYER"].x
             ry = self.y - GAME_OBJECTS["PLAYER"].y
             #print( (rx+constants.SCREEN_WIDTH/2)*constants.CELL_WIDTH )
@@ -133,8 +133,9 @@ class comp_Creature:
             #self.death_function = death_function
 
         def change_torch(self):
-            global TORCH_COLOR, TORCH_RADIUS, MAGIC_LIGHT_RADIUS, LIGHTSOURCE
-            global MANA
+            global LIGHTSOURCE, TORCH_COLOR
+            #global TORCH_COLOR, TORCH_RADIUS, MAGIC_LIGHT_RADIUS, LIGHTSOURCE
+            #global MANA
 
             if LIGHTSOURCE=="torch" and MANA > 0:
                 LIGHTSOURCE = "magic"
@@ -150,7 +151,6 @@ class comp_Creature:
 
 
         def move(self, dx, dy):
-            global GAME_MAP
             #tile_isWall = (GAME_MAP.walkable[self.owner.y + dy][self.owner.x + dx] == False)
             tile_isWall = (GAME_MAP.walkable[(self.owner.y + dy),(self.owner.x + dx)] == False)
 
@@ -244,7 +244,6 @@ class comp_Creature:
                             ry+=1
                             #rx*w, ry*h
                             if rx*w==mx and ry*h==my:
-                                print(py, ry, adj_h)
                                 tx = px+rx-adj_w
                                 ty = py+ry-adj_h
                                 new_spell = obj_Spell(objname,
@@ -275,7 +274,7 @@ class test_AI:
 
 class random_walker_AI:
     def play_turn(self):
-        global TURN
+        #global TURN
         ini = self.owner.creature.ini
         if TURN % ini == 0:
             dist = self.owner.creature.spd
@@ -321,7 +320,6 @@ def death_player(player):
 #             |_|
 
 def map_create():
-    global FOV_MAP, FOV_MAP, COL_MAP_R, COL_MAP_G, COL_MAP_B
 
     new_map = tcod.map.Map(width=constants.MAP_WIDTH, height=constants.MAP_HEIGHT)
     new_map.explored = np.full((new_map.height, new_map.width), False, dtype=bool)
@@ -339,6 +337,19 @@ def map_create():
 
     return new_map
 
+def map_light_intensity(fov_map, radius, obj_x, obj_y):
+    for x in range(len(fov_map[0,:])):
+        for y in range(len(fov_map[:,0])):
+            d = math.sqrt( ( (obj_x-x)*(obj_x-x) + (obj_y-y)*(obj_y-y) ) )
+            if d<=radius:
+                fov_map[y,x] = fov_map[y,x] * ( (radius/11)**d )
+                #fov_map = np.clip(fov_map, 0, 1)
+
+
+
+    return fov_map
+
+
 def map_update_fov(game_map, px, py):
     colmaps_R = []
     colmaps_G = []
@@ -353,9 +364,21 @@ def map_update_fov(game_map, px, py):
     fov_map = tcod.map.compute_fov(game_map.walkable, (py, px),
                                    radius=rad, algorithm=tcod.FOV_SHADOW)
 
-    col_R = (np.array(fov_map, dtype=int) * TORCH_COLOR[0]).astype(np.float16)
-    col_G = (np.array(fov_map, dtype=int) * TORCH_COLOR[1]).astype(np.float16)
-    col_B = (np.array(fov_map, dtype=int) * TORCH_COLOR[2]).astype(np.float16)
+    int_map = tcod.map.compute_fov(game_map.walkable, (py, px),
+                                   radius=rad, algorithm=tcod.FOV_SHADOW)
+
+    fov_map = np.array(fov_map, dtype=np.float16)
+    int_map = np.array(int_map, dtype=np.float16)
+    #print(fov_map)
+
+    int_map = \
+    map_light_intensity(int_map, rad, px, py)
+
+    col_R = (fov_map*TORCH_COLOR[0])
+    col_G = (fov_map*TORCH_COLOR[1])
+    col_B = (fov_map*TORCH_COLOR[2])
+
+
     col_R[col_R==0] = np.nan
     col_G[col_G==0] = np.nan
     col_B[col_B==0] = np.nan
@@ -367,11 +390,27 @@ def map_update_fov(game_map, px, py):
         if obj.light>0:
             fmap = tcod.map.compute_fov(game_map.walkable, (obj.y, obj.x),
                              radius=obj.light, algorithm=tcod.FOV_SHADOW)
-            fov_map = fov_map + fmap
 
-            col_R = (np.array(fmap, dtype=int) * obj.color[0]).astype(np.float16)
-            col_G = (np.array(fmap, dtype=int) * obj.color[1]).astype(np.float16)
-            col_B = (np.array(fmap, dtype=int) * obj.color[2]).astype(np.float16)
+            fmap = np.array(fmap, dtype=np.float16)
+
+            imap = tcod.map.compute_fov(game_map.walkable, (obj.y, obj.x),
+                             radius=obj.light, algorithm=tcod.FOV_SHADOW)
+
+            imap = np.array(imap, dtype=np.float16)
+
+            int_map += map_light_intensity(imap, obj.light, obj.x, obj.y)
+
+            fov_map += fmap
+            #fov_map = np.clip(fov_map, 0, 1)
+            col_R = (fmap*obj.color[0])
+            col_G = (fmap*obj.color[1])
+            col_B = (fmap*obj.color[2])
+
+            min_col = constants.COLOR_CLIP
+
+            #col_R, col_G, col_B = \
+            #map_light_intensity(fmap, rad, ox, oy, col_R, col_G, col_B)
+
             col_R[col_R==0] = np.nan
             col_G[col_G==0] = np.nan
             col_B[col_B==0] = np.nan
@@ -397,7 +436,7 @@ def map_update_fov(game_map, px, py):
     #print(np.shape(col_map_R))
     #print(np.shape(col_map_G))
 
-    return col_map_R, col_map_G, col_map_B, fov_map
+    return col_map_R, col_map_G, col_map_B, fov_map, int_map
 
 def map_check_creature(x, y, exclude_object = None):
 
@@ -482,7 +521,7 @@ def select_monsters(LEVEL):
 
 def draw_game():
 
-    global SURFACE_MAIN
+    #global SURFACE_MAIN
 
     # CLEAR SURFACE
     SURFACE_MAIN.fill(constants.COLOR_DEFAULT_BG)
@@ -501,7 +540,6 @@ def draw_game():
     pygame.display.flip()
 
 def draw_map(map_to_draw):
-    global FOV_MAP, COL_MAP_R, COL_MAP_G, COL_MAP_B, PLAYER, SURFACE_MAIN
     px = GAME_OBJECTS["PLAYER"].x
     py = GAME_OBJECTS["PLAYER"].y
     rx = -1
@@ -516,7 +554,7 @@ def draw_map(map_to_draw):
         ry=-1
         for y in range(py-adj_h,py+adj_h):
             ry+=1
-            if FOV_MAP[y,x]:
+            if FOV_MAP[y,x]>0:
                 map_to_draw.explored[y,x] = True
                 if map_to_draw.walkable[y,x] == False:
                     rgb = (COL_MAP_R[y,x], COL_MAP_G[y,x], COL_MAP_B[y,x])
@@ -524,11 +562,11 @@ def draw_map(map_to_draw):
                     sprite = constants.S_WALL
                     #sprite.fill(rgb, special_flags=pygame.BLEND_RGB_ADD)
                     filt = pygame.Surface((constants.CELL_WIDTH, constants.CELL_HEIGHT))
-                    filt.fill(rgb, special_flags=pygame.BLEND_RGB_ADD)
-                    filt.set_alpha(100)
+                    filt.fill(rgb, special_flags=pygame.BLEND_ADD)
+                    #filt.set_alpha(100)
+                    filt.set_alpha(180*IMAP[y,x])
                     SURFACE_MAIN.blit(sprite, (rx*w, ry*h))
                     SURFACE_MAIN.blit(filt, (rx*w, ry*h))
-
 
                 else:
                 #    if x==GAME_OBJECTS["PLAYER"].x and y==GAME_OBJECTS["PLAYER"].y:
@@ -538,8 +576,9 @@ def draw_map(map_to_draw):
                     sprite = constants.S_FLOOR
                     #sprite.fill(rgb, special_flags=pygame.BLEND_RGB_ADD)
                     filt = pygame.Surface((constants.CELL_WIDTH, constants.CELL_HEIGHT))
-                    filt.fill(rgb, special_flags=pygame.BLEND_RGB_ADD)
-                    filt.set_alpha(100)
+                    filt.fill(rgb, special_flags=pygame.BLEND_ADD)
+                    #filt.set_alpha(100)
+                    filt.set_alpha(180*IMAP[y,x])
                     SURFACE_MAIN.blit(sprite, (rx*w, ry*h))
                     SURFACE_MAIN.blit(filt, (rx*w, ry*h))
 
@@ -551,9 +590,9 @@ def draw_map(map_to_draw):
 
 def draw_debug():
 
-    #draw_text(SURFACE_MAIN, "fps: " + str(int(CLOCK.get_fps())), (0, 0), constants.COLOR_WHITE, constants.COLOR_BLACK)
-    draw_text(SURFACE_MAIN, "health: " + str(GAME_OBJECTS["PLAYER"].creature.hp), (0, 0), constants.COLOR_RED)
-    draw_text(SURFACE_MAIN, "mana: " + str(MANA), (0, 30), constants.COLOR_BLUE)
+    draw_text(SURFACE_MAIN, "fps: " + str(int(CLOCK.get_fps())), (0, 0), constants.COLOR_WHITE, constants.COLOR_BLACK)
+    draw_text(SURFACE_MAIN, "health: " + str(GAME_OBJECTS["PLAYER"].creature.hp), (0, 30), constants.COLOR_RED)
+    draw_text(SURFACE_MAIN, "mana: " + str(MANA), (0, 60), constants.COLOR_BLUE)
 
 def draw_message():
     if len(GAME_MESSAGES) <= constants.NUM_MESSAGES:
@@ -608,7 +647,7 @@ def helper_weighted_choice(choices):
             return key
 
 def helper_random_location():
-    global MONSTERS, PLAYER
+    #global MONSTERS, PLAYER
     flag_fail=True
     while flag_fail==True:
         flag_fail=True
@@ -646,6 +685,8 @@ def game_initialize():
     global SURFACE_MAIN, GAME_MAP, GAME_OBJECTS, ENEMIES, PLAYER, CLOCK
     global GAME_MESSAGES, LEVEL, TORCH_RADIUS, TURN, MONSTERS, LIGHTSOURCE
     global TORCH_COLOR, MANA, MAGIC_COUNTER, TORCH_COUNTER
+    global TURN, COL_MAP_R, COL_MAP_G, COL_MAP_B, FOV_MAP, IMAP
+    global GAME_FPS, TURN
 
     CLOCK = pygame.time.Clock()
     TURN = 0
@@ -692,8 +733,9 @@ def game_initialize():
     print("initialized")
 
 def game_main_loop():
-    global TURN, TORCH_RADIUS, COL_MAP_R, COL_MAP_G, COL_MAP_B, FOV_MAP
-    global GAME_OBJECTS, GAME_FPS, MANA, LIGHTSOURCE, MAGIC_COUNTER, TORCH_COUNTER
+    global TURN, LIGHTSOURCE, TORCH_COUNTER, MAGIC_COUNTER, TORCH_RADIUS, MANA
+    global FOV_MAP, IMAP, COL_MAP_R, COL_MAP_G, COL_MAP_B
+
     game_quit = False
 
     # definition of action
@@ -742,7 +784,9 @@ def game_main_loop():
                     TORCH_COLOR=constants.COLOR_MAGICLIGHT
 
 
-        COL_MAP_R, COL_MAP_G, COL_MAP_B, FOV_MAP = map_update_fov(GAME_MAP, GAME_OBJECTS["PLAYER"].x, GAME_OBJECTS["PLAYER"].y)
+        COL_MAP_R, COL_MAP_G, COL_MAP_B, FOV_MAP, IMAP \
+         = map_update_fov(GAME_MAP, GAME_OBJECTS["PLAYER"].x,
+                                    GAME_OBJECTS["PLAYER"].y)
 
         draw_game()
 

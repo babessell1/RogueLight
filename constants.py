@@ -1,22 +1,25 @@
 import pygame
 import tcod
+import math
 
 pygame.init()
 
 # FPS Limit
 GAME_FPS = 60
 
+# Resolution
+SCREEN_X = 1920
+SCREEN_Y = 1200
+
 # Game Sizes
-GAME_WIDTH = 960
-GAME_HEIGHT = 960
 CELL_WIDTH = 32
 CELL_HEIGHT = 32
 
 # Map vars
-SCREEN_WIDTH = 50
-SCREEN_HEIGHT = 30
-MAP_WIDTH = int(50*2)
-MAP_HEIGHT = int(50*2)
+SCREEN_WIDTH = math.ceil(SCREEN_X/CELL_WIDTH)
+SCREEN_HEIGHT = math.ceil(SCREEN_Y/CELL_HEIGHT)
+MAP_WIDTH = int(SCREEN_WIDTH*4)
+MAP_HEIGHT = int(SCREEN_HEIGHT*4)
 
 MAP_BUFFER = 25
 #MAP_HEIGHT = int(30*2)
@@ -41,14 +44,16 @@ TORCH_COUNT_THRESH = 50
 
 # Color definitions
 COLOR_BLACK = (0, 10, 20)
+COLOR_WALL = (50, 50, 50)
 COLOR_WHITE = (255, 255, 255)
 COLOR_GREY = (100, 100, 100)
-COLOR_RED = (255, 15, 15)
-COLOR_BLUE = (60, 160, 240)
-COLOR_YELLOW = (240, 240, 20)
-COLOR_TORCHLIGHT = (100, 50, 1)
-COLOR_MAGICLIGHT = (1, 25, 100)
+COLOR_RED = (255, 50, 50)
+COLOR_BLUE = (60, 120, 200)
+COLOR_YELLOW = (240, 240, 50)
+COLOR_TORCHLIGHT = (240, 120, 50)
+COLOR_MAGICLIGHT = (50, 150, 250)
 COLOR_HILIGHT = (255, 255, 0)
+COLOR_CLIP = 40
 
 COLOR_TORCH_MAG_BLEND = (int((COLOR_TORCHLIGHT[0]+COLOR_MAGICLIGHT[0])/2),
                          int((COLOR_TORCHLIGHT[1]+COLOR_MAGICLIGHT[1])/2),
@@ -184,17 +189,19 @@ SPELL_DURATIONS = {
 
     # walls
 S_WALL = pygame.image.load("data/structures/wall1.png")
+S_WALL.fill(COLOR_WALL,special_flags=pygame.BLEND_RGBA_MULT)
 S_WALL_TLIGHT = pygame.image.load("data/structures/wall1.png")
 S_WALL_TLIGHT.fill(COLOR_TORCHLIGHT, special_flags=pygame.BLEND_RGBA_MULT)
 S_WALL_EX = pygame.image.load("data/structures/wall1.png")
-S_WALL_EX.fill ((40,50,60), special_flags=pygame.BLEND_RGBA_MULT)
+S_WALL_EX.fill ((40,40,40), special_flags=pygame.BLEND_RGBA_MULT)
 
     # floor
 S_FLOOR = pygame.image.load("data/structures/floor1.png")
+S_FLOOR.fill(COLOR_WALL,special_flags=pygame.BLEND_RGBA_MULT )
 S_FLOOR_TLIGHT = pygame.image.load("data/structures/floor1.png")
 S_FLOOR_TLIGHT.fill(COLOR_TORCHLIGHT, special_flags=pygame.BLEND_RGBA_MULT)
 S_FLOOR_EX = pygame.image.load("data/structures/floor1.png")
-S_FLOOR_EX.fill ((40,50,60), special_flags=pygame.BLEND_RGBA_MULT)
+S_FLOOR_EX.fill ((40,40,40), special_flags=pygame.BLEND_RGBA_MULT)
 
 
 # Message Defaults
