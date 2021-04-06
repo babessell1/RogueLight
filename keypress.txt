@@ -1,0 +1,7 @@
+KEY VALUES
+up : 65362
+down : 65364
+left : 65361
+right : 65363
+
+MODIFIERS:

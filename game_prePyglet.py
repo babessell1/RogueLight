@@ -9,12 +9,21 @@
 # By Brandt Bessell
 
 import pygame
+import pyglet as pyg
 import tcod
 import constants
 import random
 import numpy as np
 import time
 import math
+global WINDOW
+WINDOW = None
+
+class GameWindow(pyg.window.Window):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_minimum_size(400,300)
+
 
 # __ _                   _
 #/ _\ |_ _ __ _   _  ___| |_ _   _ _ __ ___  ___
@@ -519,6 +528,18 @@ def select_monsters(LEVEL):
 #/___,' |_|  \__,_| \_/\_/ |_|_| |_|\__, |
 #                                   |___/
 
+@WINDOW.event
+def draw_startup():
+    global WINDOW
+    label = pyg.text.Label('Hello, world',
+                          font_name=constants.FONT_TITLE,
+                          font_size=36,
+                          x=WINDOW.width//2, y=WINDOW.height//2,
+                          anchor_x='center', anchor_y='center')
+
+    window.clear()
+    label.draw()
+
 def draw_game():
 
     #global SURFACE_MAIN
@@ -561,8 +582,8 @@ def draw_map(map_to_draw):
                     color = constants.COLOR_TORCHLIGHT
                     sprite = constants.S_WALL
                     #sprite.fill(rgb, special_flags=pygame.BLEND_RGB_ADD)
-                    filt = pygame.Surface((constants.CELL_WIDTH, constants.CELL_HEIGHT))
-                    filt.fill(rgb, special_flags=pygame.BLEND_ADD)
+                    #filt = pygame.Surface((constants.CELL_WIDTH, constants.CELL_HEIGHT))
+                    #filt.fill(rgb, special_flags=pygame.BLEND_ADD)
                     #filt.set_alpha(100)
                     filt.set_alpha(180*IMAP[y,x])
                     SURFACE_MAIN.blit(sprite, (rx*w, ry*h))
@@ -575,10 +596,10 @@ def draw_map(map_to_draw):
                     rgb = (COL_MAP_R[y,x], COL_MAP_G[y,x], COL_MAP_B[y,x])
                     sprite = constants.S_FLOOR
                     #sprite.fill(rgb, special_flags=pygame.BLEND_RGB_ADD)
-                    filt = pygame.Surface((constants.CELL_WIDTH, constants.CELL_HEIGHT))
-                    filt.fill(rgb, special_flags=pygame.BLEND_ADD)
+                    #filt = pygame.Surface((constants.CELL_WIDTH, constants.CELL_HEIGHT))
+                    #filt.fill(rgb, special_flags=pygame.BLEND_ADD)
                     #filt.set_alpha(100)
-                    filt.set_alpha(180*IMAP[y,x])
+                    #filt.set_alpha(180*IMAP[y,x])
                     SURFACE_MAIN.blit(sprite, (rx*w, ry*h))
                     SURFACE_MAIN.blit(filt, (rx*w, ry*h))
 
@@ -680,6 +701,7 @@ def helper_onscreen(px, py, x, y):
 #/ /_\\ (_| | | | | | |  __/
 #\____/\__,_|_| |_| |_|\___|
 
+
 def game_initialize():
     #global SURFACE_MAIN, GAME_MAP, GAME_OBJECTS, SKELETON, MUMMY, ZOMBIE, PLAYER, FOV_CALC, CLOCK, GAME_MESSAGES
     global SURFACE_MAIN, GAME_MAP, GAME_OBJECTS, ENEMIES, PLAYER, CLOCK
@@ -703,7 +725,9 @@ def game_initialize():
     pygame.mouse.set_visible
     pygame.key.set_repeat(50, 1)
 
-    SURFACE_MAIN = pygame.display.set_mode( (constants.SCREEN_WIDTH*constants.CELL_WIDTH, constants.SCREEN_HEIGHT*constants.CELL_HEIGHT) )
+    #SURFACE_MAIN = pygame.display.set_mode( (constants.SCREEN_WIDTH*constants.CELL_WIDTH, constants.SCREEN_HEIGHT*constants.CELL_HEIGHT) )
+
+    SURFACE_MAIN = pyg.window.Window()
 
     GAME_MESSAGES = []
 
@@ -732,6 +756,7 @@ def game_initialize():
     #GAME_OBJECTS = [PLAYER] + MONSTERS
     print("initialized")
 
+#@event_loop.event
 def game_main_loop():
     global TURN, LIGHTSOURCE, TORCH_COUNTER, MAGIC_COUNTER, TORCH_RADIUS, MANA
     global FOV_MAP, IMAP, COL_MAP_R, COL_MAP_G, COL_MAP_B
@@ -792,7 +817,8 @@ def game_main_loop():
 
         CLOCK.tick(constants.GAME_FPS)
 
-    pygame.quit()
+    #pygame.quit()
+    event_loop.exit()
     exit()
 
 def game_handle_keys():
@@ -830,5 +856,7 @@ def game_message(message_txt, message_color):
         GAME_MESSAGES.append((message_txt, message_color))
 
 if __name__ == '__main__':
+    WINDOW = GameWindow(1280, 720, "RogueLight", resizable=True)
+    pyg.app.run()
     game_initialize()
     game_main_loop()
