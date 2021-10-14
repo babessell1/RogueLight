@@ -1,0 +1,8 @@
+cx_Freeze
+pygame
+pyglet
+tcod
+random
+numpy
+time
+math
