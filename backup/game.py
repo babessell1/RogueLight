@@ -28,13 +28,13 @@ class obj_Actor:
     def __init__(self, x, y, obj_name, sprite, creature=None, ai=None, light=0, direction="down", color=None, death_function=None, isLiving=False):
         self.x = x # map address
         self.y = y # map address
-        self.obj_name = obj_name
+        self.obj_name = obj_name # object name (unique ID)
         self.sprite = sprite
-        self.light = light
+        self.light = light # light radius
         self.color = color
-        self.death_function = death_function
-        self.direction = direction
-        self.isLiving = isLiving
+        self.death_function = death_function # triggered after death
+        self.direction = direction # direction object is facing
+        self.isLiving = isLiving # creature is still alive
 
         self.creature = creature
         if creature:
@@ -45,7 +45,7 @@ class obj_Actor:
             self.ai = ai
             ai.owner = self
 
-    def draw(self, Game):
+    def draw(self, Game): # how to draw the object (convert these to thir own unique functions?)
         if self.obj_name=="player":
             #SURFACE_MAIN.blit(self.sprite, (constants.SCREEN_WIDTH/2*constants.CELL_WIDTH, constants.SCREEN_HEIGHT/2*constants.CELL_HEIGHT) )
             sprite = pyg.sprite.Sprite(self.sprite, batch=None)
@@ -69,11 +69,11 @@ class obj_Spell:
                  color=None, effect=None, pierce=False, range=1, type=None,
                  size=1, duration=0, imp_dmg=0, aoe_decay=0, ai=None, isLiving=False):
 
-        self.obj_name = obj_name
-        self.spell_name = spell_name
+        self.obj_name = obj_name # ID (unique)
+        self.spell_name = spell_name # name of spell (will be displayed)
         self.sprite = sprite
-        self.x = x
-        self.y = y
+        self.x = x # map address
+        self.y = y  # map address
         self.sx = sx
         self.sy = sy
         self.light = light
@@ -82,8 +82,8 @@ class obj_Spell:
         self.pierce = pierce
         self.range = range
         self.imp_dmg = imp_dmg
-        self.aoe_decay = aoe_decay
-        self.type = type
+        self.aoe_decay = aoe_decay # rate at which spell disipates on the map
+        self.type = type #
         self.size = size
         self.duration = duration
         self.max_duration = duration
@@ -117,121 +117,104 @@ class obj_Spell:
 
 class comp_Creature:
     #hp,ini,spd,atk)
-        def __init__(self, name_personal, isplayer=False, hp=10, ini=1, spd=1,
-                     atk=1, mana=0):
-                     #death_function = None):
-            self.name_personal = name_personal
-            self.isplayer = isplayer
-            self.hp = hp
-            self.maxhp = hp
-            self.ini = ini
-            self.spd = spd
-            self.atk = atk
-            self.mana = mana
-            #self.death_function = death_function
+    def __init__(self, name_personal, isplayer=False, hp=10, ini=1, spd=1,
+                 atk=1, mana=0):
+                 #death_function = None):
+        self.name_personal = name_personal
+        self.isplayer = isplayer
+        self.hp = hp
+        self.maxhp = hp
+        self.ini = ini
+        self.spd = spd
+        self.atk = atk
+        self.mana = mana
+        #self.death_function = death_function
 
-        def change_torch(self):
-            global LIGHTSOURCE, TORCH_COLOR
-            #global TORCH_COLOR, TORCH_RADIUS, MAGIC_LIGHT_RADIUS, LIGHTSOURCE
-            #global MANA
+    def move(self, Game, dx, dy):
+        #tile_isWall = (GAME_MAP.walkable[self.owner.y + dy][self.owner.x + dx] == False)
+        tile_isWall = (Game.map.walkable[(self.owner.y + dy),(self.owner.x + dx)] == False)
 
-            if LIGHTSOURCE=="torch" and self.mana > 0:
-                LIGHTSOURCE = "magic"
-                TORCH_COLOR = constants.COLOR_MAGICLIGHT
+        target = map_check_creature(Game.game_objects, self.owner.x + dx, self.owner.y + dy, self.owner)
 
-            elif LIGHTSOURCE=="magic" and TORCH_RADIUS > 1:
-                LIGHTSOURCE = "torch"
-                TORCH_COLOR = constants.COLOR_TORCHLIGHT
+        if target and target.isLiving:
+            self.attack(Game, target, self.atk)
 
-            else:
-                LIGHTSOURCE = "emergency"
-                TORCH_COLOR = constants.COLOR_MAGICLIGHT
+        #new_map = GAME_MAP
+        if Game.map.walkable[self.owner.y+dy, self.owner.x+dx] and target is None:
+            self.owner.x += dx
+            self.owner.y += dy
 
-        def move(self, Game, dx, dy):
-            #tile_isWall = (GAME_MAP.walkable[self.owner.y + dy][self.owner.x + dx] == False)
-            tile_isWall = (Game.map.walkable[(self.owner.y + dy),(self.owner.x + dx)] == False)
+    def attack(self, Game, target, damage):
+        if target.creature.hp < 1:
+            Game.game_messages.append((target.creature.name_personal + " is already dead.", constants.COLOR_WHITE))
 
-            target = map_check_creature(Game.game_objects, self.owner.x + dx, self.owner.y + dy, self.owner)
+        else:
+            Game.game_messages.append((self.name_personal + " attacks " + target.creature.name_personal + " for " + str(damage) + " damage!", constants.COLOR_WHITE))
+            target.creature.take_damage(Game, damage)
 
-            if target and target.isLiving:
-                self.attack(Game, target, self.atk)
+    def take_damage(self, Game, damage):
+        self.hp -= damage
+        Game.game_messages.append((self.name_personal + " HP: " + str(self.hp) + "/" + str(self.maxhp), constants.COLOR_RED))
+        if self.hp <= 0:
+            #self.death_function=death_monster
+            if self.owner.death_function is not None:
+                self.owner.death_function(self.owner, Game)
 
-            #new_map = GAME_MAP
-            if Game.map.walkable[self.owner.y+dy, self.owner.x+dx] and target is None:
-                self.owner.x += dx
-                self.owner.y += dy
+    def cast_spell(self, Game, mouse_x, mouse_y, choice):
 
-        def attack(self, Game, target, damage):
-            if target.creature.hp < 1:
-                Game.game_messages.append((target.creature.name_personal + " is already dead.", constants.COLOR_WHITE))
+        w = Game.cell_size
+        h = w
+        tx = mouse_x//w
+        ty = mouse_y//h
+        mx = tx*w
+        my = ty*h
 
-            else:
-                Game.game_messages.append((self.name_personal + " attacks " + target.creature.name_personal + " for " + str(damage) + " damage!", constants.COLOR_WHITE))
-                target.creature.take_damage(Game, damage)
+        px = self.owner.x
+        py = self.owner.y
+        rx = -1
+        adj_w = (( Game.window_width+constants.GUI_WIDTH)//2)//w
+        adj_h = (Game.window_height//2)//h
 
-        def take_damage(self, Game, damage):
-            self.hp -= damage
-            Game.game_messages.append((self.name_personal + " HP: " + str(self.hp) + "/" + str(self.maxhp), constants.COLOR_RED))
-            if self.hp <= 0:
-                #self.death_function=death_monster
-                if self.owner.death_function is not None:
-                    self.owner.death_function(self.owner, Game)
+        for x in range(px-adj_w,px+adj_w):
+            rx+=1
+            ry=-1
+            for y in range(py-adj_h,py+adj_h):
+                ry+=1
+                #rx*w, ry*h
+                if rx*w==mx and ry*h==my:
+                    # pick unique object name for spell particles
+                    idx = 1
+                    objname = choice + "_" + str(idx)
+                    pickObj = False
+                    while not pickObj:
+                        if objname in Game.game_objects.keys():
+                            objname = choice + "_" + str(idx)
+                        else:
+                            pickObj=True
+                        idx+=1
 
-        def cast_spell(self, Game, mouse_x, mouse_y, choice):
-
-            w = Game.cell_size
-            h = w
-            tx = mouse_x//w
-            ty = mouse_y//h
-            mx = tx*w
-            my = ty*h
-
-            px = self.owner.x
-            py = self.owner.y
-            rx = -1
-            adj_w = (( Game.window_width+constants.GUI_WIDTH)//2)//w
-            adj_h = (Game.window_height//2)//h
-
-            for x in range(px-adj_w,px+adj_w):
-                rx+=1
-                ry=-1
-                for y in range(py-adj_h,py+adj_h):
-                    ry+=1
-                    #rx*w, ry*h
-                    if rx*w==mx and ry*h==my:
-                        # pick unique object name for spell particles
-                        idx = 1
-                        objname = choice + "_" + str(idx)
-                        pickObj = False
-                        while not pickObj:
-                            if objname in Game.game_objects.keys():
-                                objname = choice + "_" + str(idx)
-                            else:
-                                pickObj=True
-                            idx+=1
-
-                        tx = px+rx-adj_w
-                        ty = py+ry-adj_h
-                        new_spell = obj_Spell(objname,
-                                  constants.SPELL_NAMES[choice],
-                                  constants.SPELL_SPRITES[choice],
-                                  tx, ty,
-                                  sx=px, sy=py,
-                                  light=constants.SPELL_LIGHT[choice],
-                                  color=constants.SPELL_COLORS[choice],
-                                  effect=None, pierce=False,
-                                  range=constants.SPELL_RANGES[choice],
-                                  type=constants.SPELL_TYPES[choice],
-                                  size=constants.SPELL_SIZES[choice],
-                                  imp_dmg = constants.SPELL_IMPACT_DMG[choice],
-                                  aoe_decay = constants.SPELL_AOE_DECAY[choice],
-                                  duration=constants.SPELL_DURATIONS[choice])
-                        Game.game_objects[objname] = new_spell
-                        Game.draw_map()
-                        Game.draw_gui()
-                        Game.draw_debug()
-                        Game.draw_message()
-                        return "moved"
+                    tx = px+rx-adj_w
+                    ty = py+ry-adj_h
+                    new_spell = obj_Spell(objname,
+                              constants.SPELL_NAMES[choice],
+                              constants.SPELL_SPRITES[choice],
+                              tx, ty,
+                              sx=px, sy=py,
+                              light=constants.SPELL_LIGHT[choice],
+                              color=constants.SPELL_COLORS[choice],
+                              effect=None, pierce=False,
+                              range=constants.SPELL_RANGES[choice],
+                              type=constants.SPELL_TYPES[choice],
+                              size=constants.SPELL_SIZES[choice],
+                              imp_dmg = constants.SPELL_IMPACT_DMG[choice],
+                              aoe_decay = constants.SPELL_AOE_DECAY[choice],
+                              duration=constants.SPELL_DURATIONS[choice])
+                    Game.game_objects[objname] = new_spell
+                    Game.draw_map()
+                    Game.draw_gui()
+                    Game.draw_debug()
+                    Game.draw_message()
+                    return "moved"
 
 #   _     _____
 #  /_\    \_   \
@@ -313,19 +296,18 @@ def death_player(player, Game):
 #/ /\/\ \/  _  \/ ___/
 #\/    \/\_/ \_/\/
 
-
+# calc light intensity at each point from source
 def map_light_intensity(fov_map, radius, obj_x, obj_y):
+    # TODO: optimize better by constraining iteration around radius
     for x in range(len(fov_map[0,:])):
         for y in range(len(fov_map[:,0])):
             d = math.sqrt( ( (obj_x-x)*(obj_x-x) + (obj_y-y)*(obj_y-y) ) )
             if d<=radius:
                 fov_map[y,x] = fov_map[y,x] * ( (radius/11)**d )
                 #fov_map = np.clip(fov_map, 0, 1)
-
-
-
     return fov_map
 
+# check if a creature can spawn
 def map_check_creature(Game_obj, x, y, exclude_object = None):
 
     target = None
@@ -356,6 +338,7 @@ def map_check_creature(Game_obj, x, y, exclude_object = None):
 def map_make_escapes(x):
     x = "X"
 
+# generate monster list
 def select_monsters(LEVEL, game_map, game_objects):
     creature_player = comp_Creature("Carl the Magnificent",
                                     isplayer=True,
@@ -412,6 +395,7 @@ def select_monsters(LEVEL, game_map, game_objects):
 #/ __  //__/ /___/ ___//__/ _  \_\ \
 #\/ /_/\__/\____/\/   \__/\/ \_/\__/
 
+# choose an item from a dictionary based on weights
 def helper_weighted_choice(choices):
     max = sum(choices.values())
     pick = random.uniform(0, max)
@@ -421,6 +405,7 @@ def helper_weighted_choice(choices):
         if current > pick:
             return key
 
+# choose a random location on the map that is not off-limits
 def helper_random_location(game_map, game_objects):
     #global MONSTERS, PLAYER
     flag_fail=True
@@ -452,6 +437,7 @@ def helper_random_location(game_map, game_objects):
 
     return x, y, game_objects
 
+# determine if a location is onscreen
 def helper_onscreen(px, py, x, y):
     #TODO:
     adj_w = constants.SCREEN_WIDTH//2
@@ -461,12 +447,14 @@ def helper_onscreen(px, py, x, y):
                 y > py + adj_h or
                 y < py - adj_h)
 
+
 def calc_aoe_damage(sx, sy, tx, ty, aoe_decay, imp_dmg):
     aoe_mod = aoe_decay*math.sqrt((tx-sx)*(tx-sx)+(ty-sy)*(ty-sy))//2
     dmg = imp_dmg - aoe_mod
     if dmg < 1 : dmg = 1
     return dmg
 
+# draw text to screen
 def draw_text(text_to_display, x, y, text_color, font_size):
     label = pyg.text.Label(text_to_display, font_name='Dungeon', bold=True,
                            font_size=font_size, color=text_color, x=x, y=y)
@@ -562,7 +550,6 @@ class Game:
         self.map.explored = np.full( (map_width, map_height), False, dtype=bool )
         self.map.walkable[:,:] = True
         self.map.isWall = np.full( (map_width, map_height), False, dtype=bool )
-
         self.map.walkable[:,0:constants.MAP_BUFFER] = False
         self.map.isWall[:,0:constants.MAP_BUFFER] = True
         self.map.walkable[:,(map_width-constants.MAP_BUFFER):map_width] = False
@@ -677,15 +664,11 @@ class Game:
         colmaps_R = []
         colmaps_G = []
         colmaps_B = []
-
-
+        # tick torch and mana for light use if they cannot fall below zero
         if self.light_source=="torch" and self.torch_counter>0:
             self.torch_counter -= 1
         elif self.light_source=="magic" and self.game_objects["PLAYER"].creature.mana>0:
             self.game_objects["PLAYER"].creature.mana -= 1
-
-        print("torch: ", self.torch_counter)
-        print("mana: ", self.game_objects["PLAYER"].creature.mana)
 
         # force to possible light source if mana/fuel drops to zero
         if self.light_source == "emergency" and self.torch_counter>0:
@@ -700,7 +683,7 @@ class Game:
         elif self.torch_counter<1 and self.game_objects["PLAYER"].creature.mana<1:
             self.light_source = "emergency"
 
-        print("source: ", self.light_source)
+        # calculate light intensity
         if self.light_source=="torch":
             print(int(constants.BASE_TORCH_RADIUS*((self.torch_counter)/constants.INIT_TORCH_CHARGE)))
             self.torch_rad = int(constants.BASE_TORCH_RADIUS*((self.torch_counter)/constants.INIT_TORCH_CHARGE))+1
@@ -712,27 +695,26 @@ class Game:
             self.torch_rad = constants.E_LIGHT_RADIUS
             self.torch_color = constants.COLOR_MAGICLIGHT
 
+        # calculate  fov
         fov_map = tcod.map.compute_fov(self.map.walkable, (py, px),
                                        radius=self.torch_rad, algorithm=tcod.FOV_SHADOW)
 
-        int_map = tcod.map.compute_fov(self.map.walkable, (py, px),
-                                       radius=self.torch_rad, algorithm=tcod.FOV_SHADOW)
+        #int_map = tcod.map.compute_fov(self.map.walkable, (py, px),
+                                       #radius=self.torch_rad, algorithm=tcod.FOV_SHADOW)
 
         fov_map = np.array(fov_map, dtype=np.float16)
-        int_map = np.array(int_map, dtype=np.float16)
-        int_map = \
-        map_light_intensity(int_map, self.torch_rad, px, py)
+        int_map = map_light_intensity(fov_map, self.torch_rad, px, py)
         col_R = (fov_map*self.torch_color[0])
         col_G = (fov_map*self.torch_color[1])
         col_B = (fov_map*self.torch_color[2])
         col_R[col_R==0] = np.nan
         col_G[col_G==0] = np.nan
         col_B[col_B==0] = np.nan
-        colmaps_R.append(col_R)
+        colmaps_R.append(col_R) # add player light source to color map
         colmaps_G.append(col_G)
         colmaps_B.append(col_B)
 
-        for obj in self.game_objects.values():
+        for obj in self.game_objects.values(): # calculate mob fov map color
             if obj.light>0:
                 fmap = tcod.map.compute_fov(self.map.walkable, (obj.y, obj.x),
                                  radius=obj.light, algorithm=tcod.FOV_SHADOW)
@@ -755,6 +737,7 @@ class Game:
                 colmaps_G.append(col_G)
                 colmaps_B.append(col_B)
 
+        # average out the color maps from the player and each object on the map
         def numpy_nan_mean(a):
             return np.nan if np.all(a!=a) else np.nanmean(a, axis=0)
 
@@ -768,6 +751,8 @@ class Game:
         col_map_R[np.isnan(col_map_R)] = 0
         col_map_G[np.isnan(col_map_G)] = 0
         col_map_B[np.isnan(col_map_B)] = 0
+
+        # set maps for drawing
         self.map.lum = int_map
         self.map.red = col_map_R
         self.map.green = col_map_G
@@ -775,16 +760,19 @@ class Game:
         self.fov = fov_map
         return
 
+    # draw user interface
     def draw_gui(self):
         batch = pyg.graphics.Batch()
         background = pyg.shapes.Rectangle(0, 0, constants.GUI_WIDTH, self.window_height,
                                           color=constants.COLOR_GREY, batch=batch)
         batch.draw()
 
+    # draw game objects, including player
     def draw_objects(self):
         for obj in self.game_objects.values():
             obj.draw(self)
 
+    # draw debug menu (may become draw_stats in the future)
     def draw_debug(self):
         start_y = 5
         #draw_text("fps: " + str(int(CLOCK.get_fps())), (0, 0), constants.COLOR_WHITE, constants.COLOR_BLACK)
@@ -793,7 +781,9 @@ class Game:
         draw_text("TP: " + str(self.torch_counter), 235, self.window_height-28-start_y, constants.COLOR_YELLOW, 28)
         draw_text("fps: " + str(self.fps), 5, self.window_height-56-start_y, constants.COLOR_WHITE, 28)
 
+    #draw game messages
     def draw_message(self):
+        #TODO: fix trailing characters
         if len(self.game_messages) <= constants.NUM_MESSAGES:
             to_draw = self.game_messages
         else:
@@ -807,6 +797,7 @@ class Game:
             draw_text(message, 5, start_y + (i*text_height), color, 28)
             i += 1
 
+    # draw highlights (such as player hovering over a tile during a cast)
     def draw_highlight(self, x, y,color):
 
         w = self.cell_size
