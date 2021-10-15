@@ -339,8 +339,8 @@ def map_make_escapes(x):
     x = "X"
 
 # generate monster list
-def select_monsters(LEVEL, game_map, game_objects):
-    creature_player = comp_Creature("Carl the Magnificent",
+def select_monsters(level, game_map):
+    creature_player = comp_Creature("Carl",
                                     isplayer=True,
                                     hp=constants.INIT_HP,
                                     atk=constants.INIT_ATK,
@@ -354,7 +354,7 @@ def select_monsters(LEVEL, game_map, game_objects):
     print("selecting monsters")
 
     monster_dict = {}
-    if LEVEL==1:
+    if level==1:
         mon_pool = ["SKELETON_1", "SKELETON_2", "SKELETON_3",
                     "MUMMY_3", "MUMMY_2", "MUMMY_3",
                     "ZOMBIE_1", "ZOMBIE_2", "ZOMBIE_3",
@@ -386,7 +386,16 @@ def select_monsters(LEVEL, game_map, game_objects):
             #MONSTERS[i] = monster
 
     print("monsters selected")
+    print(game_objects)
     return game_objects
+
+def select_loot(level, game_map):
+    loot_selection = {}
+    for i in range(level-1):
+        print(i)
+        loot_selection |= constants.LOOT_TAB_MAP[level]
+
+    return loot_selection
 
 
 #         __  __    ___  __  __  __
@@ -558,7 +567,8 @@ class Game:
         self.map.isWall[0:constants.MAP_BUFFER,:] = True
         self.map.walkable[(map_height-constants.MAP_BUFFER):map_height,:] = False
         self.map.isWall[(map_height-constants.MAP_BUFFER):map_height,:] = True
-        self.game_objects = select_monsters(level, self.map, None)
+        self.game_objects =  select_monsters(level, self.map)
+        self.game_objects.update(select_loot(level, self.map))
         px = self.game_objects['PLAYER'].x
         py = self.game_objects['PLAYER'].y
         temp = np.array(self.map.walkable)
@@ -677,7 +687,6 @@ class Game:
             self.light_source == "magic"
         elif self.torch_counter<1 and self.game_objects["PLAYER"].creature.mana>0:
             self.light_source = "magic"
-            print("switch")
         elif self.torch_counter>0 and self.game_objects["PLAYER"].creature.mana<1:
             self.light_source = "torch"
         elif self.torch_counter<1 and self.game_objects["PLAYER"].creature.mana<1:
@@ -685,7 +694,6 @@ class Game:
 
         # calculate light intensity
         if self.light_source=="torch":
-            print(int(constants.BASE_TORCH_RADIUS*((self.torch_counter)/constants.INIT_TORCH_CHARGE)))
             self.torch_rad = int(constants.BASE_TORCH_RADIUS*((self.torch_counter)/constants.INIT_TORCH_CHARGE))+1
             self.torch_color = constants.COLOR_TORCHLIGHT
         elif self.light_source=="magic":
@@ -794,7 +802,7 @@ class Game:
 
         i = 0
         for message, color in to_draw[::-1]:
-            draw_text(message, 5, start_y + (i*text_height), color, 28)
+            draw_text(message, 5, start_y + (i*text_height), color, 18)
             i += 1
 
     # draw highlights (such as player hovering over a tile during a cast)

@@ -43,13 +43,13 @@ pyg.resource.add_font("data/DUNGRG.TTF")
 FONT_TITLE = pyg.font.load("Dungeon")
 
 # TORCH SETTINGS
-INIT_MANA = 20
+INIT_MANA = 200
 INIT_HP = 10
 INIT_ATK = 2
-INIT_TORCH_CHARGE = 20
+INIT_TORCH_CHARGE = 2000
 MAGIC_LIGHT_RADIUS = 10
 E_LIGHT_RADIUS = 2
-BASE_TORCH_RADIUS = 7
+BASE_TORCH_RADIUS = 9
 MANA_COUNT_THRESH = 10
 TORCH_COUNT_THRESH = 50
 
@@ -220,15 +220,22 @@ SPELL_SIZES = {
              "FIREBALL" : 3 }
 
 SPELL_IMPACT_DMG = {
-             "FIREBALL" : 5
-}
+             "FIREBALL" : 5 }
 
 SPELL_AOE_DECAY = {
-             "FIREBALL" : 1
-}
+             "FIREBALL" : 1 }
 
 SPELL_DURATIONS = {
-            "FIREBALL" : 3 }
+             "FIREBALL" : 3 }
+
+## LOOT TABLES
+LOOT_TAB_1 = {
+            "FIREBALL" : 1 }
+
+LOOT_TAB_MAP = [
+            LOOT_TAB_1
+]
+
 
 
 

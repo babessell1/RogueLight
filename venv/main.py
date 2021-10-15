@@ -118,11 +118,9 @@ class GameWindow(pyg.window.Window):
             self.Game.game_objects["PLAYER"].sprite = constants.RIGHT_SPRITES["PLAYER"]
             moveFlag = True
         elif symbol == pyg.window.key.C:
-            print("cast")
             self.cast = True
             moveFlag=True
         elif symbol == pyg.window.key.T:
-            print("change light")
             if self.Game.game_objects["PLAYER"].creature.mana>0 and self.Game.light_source=="torch":
                 self.Game.light_source = "magic"
             elif self.Game.game_objects["PLAYER"].creature.mana<1 and self.Game.light_source=="torch":
@@ -139,7 +137,6 @@ class GameWindow(pyg.window.Window):
 
         if moveFlag:
             self.Game.turn += 1
-            print("turn: ", self.Game.turn)
             rmobj = []
             for obj in self.Game.game_objects.values():
                 if obj.ai:
