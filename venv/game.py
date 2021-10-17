@@ -25,7 +25,7 @@ import math
 #          |__/
 
 class obj_Actor:
-    def __init__(self, x, y, obj_name, sprite, creature=None, ai=None, light=0, direction="down", color=None, death_function=None, isLiving=False):
+    def __init__(self, x, y, obj_name, sprite, creature=None, container=None, spell=None, ai=None, light=0, direction="down", color=None, death_function=None, isLiving=False):
         self.x = x # map address
         self.y = y # map address
         self.obj_name = obj_name # object name (unique ID)
@@ -37,43 +37,28 @@ class obj_Actor:
         self.isLiving = isLiving # creature is still alive
 
         self.creature = creature
+        self.spell = spell
+        self.container = container
+
         if creature:
-            self.creature = creature
             creature.owner = self
+            self.creature = creature
+        if container:
+            container.owner = self
+            self.container = container
+        if spell:
+            spell.owner = self
+            self.spell = spell
+
         self.ai = ai
         if ai:
             self.ai = ai
             ai.owner = self
 
-    def draw(self, Game): # how to draw the object (convert these to thir own unique functions?)
-        if self.obj_name=="player":
-            #SURFACE_MAIN.blit(self.sprite, (constants.SCREEN_WIDTH/2*constants.CELL_WIDTH, constants.SCREEN_HEIGHT/2*constants.CELL_HEIGHT) )
-            sprite = pyg.sprite.Sprite(self.sprite, batch=None)
-            sprite.update( (Game.window_width+constants.GUI_WIDTH)//2,
-                           Game.window_height//2)
-            sprite.draw()
-        else:
-            if Game.fov[self.y,self.x]>0:
-                rx = self.x - Game.game_objects["PLAYER"].x
-                ry = self.y - Game.game_objects["PLAYER"].y
-                sprite = pyg.sprite.Sprite(self.sprite, batch=None)
-                sprite.update( x=(rx*Game.cell_size) + ( (Game.window_width+constants.GUI_WIDTH)//2),
-                               y=(ry*Game.cell_size)+(Game.window_height//2) )
-                if self.creature.hp<1:
-                    sprite.color = (140, 20, 20)
-                sprite.draw()
-                #SURFACE_MAIN.blit(self.sprite, ( (rx+constants.SCREEN_WIDTH/2)*constants.CELL_WIDTH, (ry+constants.SCREEN_HEIGHT/2)*constants.CELL_HEIGHT) )
-
-class obj_Spell:
-    def __init__(self, obj_name, spell_name, sprite, x, y, sx=None, sy=None, light=0,
+class comp_Spell:
+    def __init__(self, sx=None, sy=None, light=0,
                  color=None, effect=None, pierce=False, range=1, type=None,
-                 size=1, duration=0, imp_dmg=0, aoe_decay=0, ai=None, isLiving=False):
-
-        self.obj_name = obj_name # ID (unique)
-        self.spell_name = spell_name # name of spell (will be displayed)
-        self.sprite = sprite
-        self.x = x # map address
-        self.y = y  # map address
+                 size=1, duration=0, imp_dmg=0, aoe_decay=0, ai=None, isPassable=True):
         self.sx = sx
         self.sy = sy
         self.light = light
@@ -87,7 +72,7 @@ class obj_Spell:
         self.size = size
         self.duration = duration
         self.max_duration = duration
-        self.isLiving = isLiving
+        self.isPassable = isPassable
         if self.type == "blast":
             ai = blast()
             self.ai = ai
@@ -115,6 +100,32 @@ class obj_Spell:
                         sprites.append(sprite)
             batch.draw()
 
+class comp_Container:
+    def __init__(self, item, sprite_id, name, isUnlocked=True):
+        self.item = item
+        self.sprite_id = sprite_id
+        self.name = name
+        self.isUnlocked = isUnlocked
+    def open(self, Game):
+        if self.isUnlocked == False:
+            Game.game_messages.append(("Locked.", constants.COLOR_RED))
+        elif self.owner.isLiving == False:
+            Game.game_messages.append(("Already Pillaged.", constants.COLOR_WHITE))
+        else:
+            self.owner.isLiving = False
+            self.owner.sprite = constants.CONTAINER_SPRITES_PILLAGED[self.sprite_id]
+            Game.game_messages.append((f"Found {self.name}.", constants.COLOR_YELLOW))
+
+    def draw(self, Game):
+        if Game.fov[self.owner.y, self.owner.x] > 0:
+            rx = self.owner.x - Game.game_objects["PLAYER"].x
+            ry = self.owner.y - Game.game_objects["PLAYER"].y
+            sprite = pyg.sprite.Sprite(self.owner.sprite, batch=None)
+            sprite.update(x=(rx * Game.cell_size) + ((Game.window_width + constants.GUI_WIDTH) // 2),
+                          y=(ry * Game.cell_size) + (Game.window_height // 2))
+
+            sprite.draw()
+
 class comp_Creature:
     #hp,ini,spd,atk)
     def __init__(self, name_personal, isplayer=False, hp=10, ini=1, spd=1,
@@ -134,7 +145,7 @@ class comp_Creature:
         #tile_isWall = (GAME_MAP.walkable[self.owner.y + dy][self.owner.x + dx] == False)
         tile_isWall = (Game.map.walkable[(self.owner.y + dy),(self.owner.x + dx)] == False)
 
-        target = map_check_creature(Game.game_objects, self.owner.x + dx, self.owner.y + dy, self.owner)
+        target = map_check_object(Game.game_objects, self.owner.x + dx, self.owner.y + dy, self.owner)
 
         if target and target.isLiving:
             self.attack(Game, target, self.atk)
@@ -145,12 +156,13 @@ class comp_Creature:
             self.owner.y += dy
 
     def attack(self, Game, target, damage):
-        if target.creature.hp < 1:
+        if target.creature and target.creature.hp < 1:
             Game.game_messages.append((target.creature.name_personal + " is already dead.", constants.COLOR_WHITE))
-
-        else:
+        elif target.creature:
             Game.game_messages.append((self.name_personal + " attacks " + target.creature.name_personal + " for " + str(damage) + " damage!", constants.COLOR_WHITE))
             target.creature.take_damage(Game, damage)
+        elif target.container and self.owner.obj_name=="player":
+            target.container.open(Game)
 
     def take_damage(self, Game, damage):
         self.hp -= damage
@@ -215,6 +227,25 @@ class comp_Creature:
                     Game.draw_debug()
                     Game.draw_message()
                     return "moved"
+
+    def draw(self, Game): # how to draw the object (convert these to thir own unique functions?)
+        if self.owner.obj_name=="player":
+            #SURFACE_MAIN.blit(self.sprite, (constants.SCREEN_WIDTH/2*constants.CELL_WIDTH, constants.SCREEN_HEIGHT/2*constants.CELL_HEIGHT) )
+            sprite = pyg.sprite.Sprite(self.owner.sprite, batch=None)
+            sprite.update( (Game.window_width+constants.GUI_WIDTH)//2,
+                           Game.window_height//2)
+            sprite.draw()
+        else:
+            if Game.fov[self.owner.y,self.owner.x]>0:
+                rx = self.owner.x - Game.game_objects["PLAYER"].x
+                ry = self.owner.y - Game.game_objects["PLAYER"].y
+                sprite = pyg.sprite.Sprite(self.owner.sprite, batch=None)
+                sprite.update( x=(rx*Game.cell_size) + ( (Game.window_width+constants.GUI_WIDTH)//2),
+                               y=(ry*Game.cell_size)+(Game.window_height//2) )
+                if self.hp<1:
+                    sprite.color = (140, 20, 20)
+                sprite.draw()
+                #SURFACE_MAIN.blit(self.sprite, ( (rx+constants.SCREEN_WIDTH/2)*constants.CELL_WIDTH, (ry+constants.SCREEN_HEIGHT/2)*constants.CELL_HEIGHT) )
 
 #   _     _____
 #  /_\    \_   \
@@ -303,24 +334,23 @@ def map_light_intensity(fov_map, radius, obj_x, obj_y):
         for y in range(len(fov_map[:,0])):
             d = math.sqrt( ( (obj_x-x)*(obj_x-x) + (obj_y-y)*(obj_y-y) ) )
             if d<=radius:
-                fov_map[y,x] = fov_map[y,x] * ( (radius/11)**d )
+                fov_map[y,x] = fov_map[y,x] * ( (radius/11)**(d+1) )
                 #fov_map = np.clip(fov_map, 0, 1)
     return fov_map
 
-# check if a creature can spawn
-def map_check_creature(Game_obj, x, y, exclude_object = None):
+
+def map_check_object(Game_obj, x, y, exclude_object = None):
 
     target = None
 
     if exclude_object:
-        # check object list to find creature at that location that isn't excluded
+        # check object list to find object at that location that isn't excluded
         for obj in Game_obj.values():
             if (obj is not exclude_object and
                 obj.x == x and
                 obj.y == y and
-                obj.creature):
-                target = obj
-
+                (obj.creature or obj.container)):
+                    target = obj
             if target:
                 return target
 
@@ -329,9 +359,8 @@ def map_check_creature(Game_obj, x, y, exclude_object = None):
         for obj in Game_obj:
             if (obj.x == x and
                 obj.y == y and
-                obj.creature):
-                target = obj
-
+                obj.creature or obj.container):
+                    target = obj
             if target:
                 return target
 
@@ -350,8 +379,8 @@ def select_monsters(level, game_map):
     game_objects = {}
     px, py, game_objects = helper_random_location(game_map, game_objects)
 
-    game_objects["PLAYER"] = obj_Actor(px, py, "player", constants.A_PLAYER, creature = creature_player, death_function=death_player, light=0, isLiving=True)
-    print("selecting monsters")
+    #game_objects["PLAYER"] = obj_Actor(px, py, "player", constants.A_PLAYER, creature = creature_player, death_function=death_player, light=0, isLiving=True)
+    game_objects["PLAYER"] = obj_Actor(px, py, "player", constants.S_PLAYER_TORCH, creature=creature_player, death_function=death_player, light=0, isLiving=True)
 
     monster_dict = {}
     if level==1:
@@ -385,17 +414,22 @@ def select_monsters(level, game_map):
             game_objects[sel] = monster
             #MONSTERS[i] = monster
 
-    print("monsters selected")
-    print(game_objects)
     return game_objects
 
-def select_loot(level, game_map):
-    loot_selection = {}
-    for i in range(level-1):
-        print(i)
-        loot_selection |= constants.LOOT_TAB_MAP[level]
-
-    return loot_selection
+def select_loot(level, game_map, game_objects):
+    for i in range(level):
+        while True:
+            x, y, game_objects = helper_random_location(game_map, game_objects)
+            item = helper_weighted_choice(constants.LOOT_TAB_MAP_CHEST[i])
+            if item not in game_objects.keys():
+                container_key = "".join(["CHEST",str(i+1)])
+                container_id = "".join(["CHEST",str(i+1), "_", str(x), "_", str(y)])
+                item_obj = obj_Actor(x, y, container_id, constants.CONTAINER_SPRITES_CLOSED[container_key],
+                                     container=comp_Container(item, container_key, "chest", isUnlocked=True),
+                                     isLiving=True)
+                game_objects.update({container_key : item_obj})
+                break
+    return game_objects
 
 
 #         __  __    ___  __  __  __
@@ -514,6 +548,7 @@ def game_main_loop():
                 if TORCH_RADIUS==1 and MANA>1:
                     LIGHTSOURCE="magic"
                     TORCH_COLOR=constants.COLOR_MAGICLIGHT
+
                 elif TORCH_RADIUS==1:
                     LIGHTSOURCE="emergency"
                     TORCH_COLOR=constants.COLOR_MAGICLIGHT
@@ -523,6 +558,7 @@ def game_main_loop():
                 if MANA<1 and TORCH_RADIUS>1:
                     LIGHTSOURCE="torch"
                     TORCH_COLOR=constants.COLOR_TORCHLIGHT
+
                 elif MANA<1:
                     LIGHTSOURCE="emergency"
                     TORCH_COLOR=constants.COLOR_MAGICLIGHT
@@ -568,7 +604,8 @@ class Game:
         self.map.walkable[(map_height-constants.MAP_BUFFER):map_height,:] = False
         self.map.isWall[(map_height-constants.MAP_BUFFER):map_height,:] = True
         self.game_objects =  select_monsters(level, self.map)
-        self.game_objects.update(select_loot(level, self.map))
+        self.game_objects =  select_loot(level, self.map, self.game_objects)
+        print(self.game_objects)
         px = self.game_objects['PLAYER'].x
         py = self.game_objects['PLAYER'].y
         temp = np.array(self.map.walkable)
@@ -665,10 +702,8 @@ class Game:
                         sprites.append(filt)
         batch.draw()
         batch_filt.draw()
-        self.game_objects['PLAYER'].draw(self)
-        for obj in self.game_objects.values():
-            if obj.obj_name != "player":
-                obj.draw(self)
+
+        self.draw_objects()
 
     def map_update_fov(self, px, py):
         colmaps_R = []
@@ -683,14 +718,19 @@ class Game:
         # force to possible light source if mana/fuel drops to zero
         if self.light_source == "emergency" and self.torch_counter>0:
             self.light_source = "torch"
+            self.game_objects["PLAYER"].sprite = constants.S_PLAYER_TORCH
         elif self.light_source == "emergency" and self.game_objects["PLAYER"].creature.mana>0:
             self.light_source == "magic"
+            self.game_objects["PLAYER"].sprite = constants.S_PLAYER_MAGIC
         elif self.torch_counter<1 and self.game_objects["PLAYER"].creature.mana>0:
             self.light_source = "magic"
+            self.game_objects["PLAYER"].sprite = constants.S_PLAYER_MAGIC
         elif self.torch_counter>0 and self.game_objects["PLAYER"].creature.mana<1:
             self.light_source = "torch"
+            self.game_objects["PLAYER"].sprite = constants.S_PLAYER_TORCH
         elif self.torch_counter<1 and self.game_objects["PLAYER"].creature.mana<1:
             self.light_source = "emergency"
+            self.game_objects["PLAYER"].sprite = constants.S_PLAYER_MAGICLOW
 
         # calculate light intensity
         if self.light_source=="torch":
@@ -777,8 +817,14 @@ class Game:
 
     # draw game objects, including player
     def draw_objects(self):
+        self.game_objects['PLAYER'].creature.draw(self)
         for obj in self.game_objects.values():
-            obj.draw(self)
+            if obj.creature and not obj.obj_name=="PLAYER":
+                obj.creature.draw(self)
+            elif obj.spell:
+                obj.spell.draw(self)
+            elif obj.container:
+                obj.container.draw(self)
 
     # draw debug menu (may become draw_stats in the future)
     def draw_debug(self):

@@ -100,22 +100,22 @@ class GameWindow(pyg.window.Window):
         if symbol == pyg.window.key.UP: # player move up
             self.Game.game_objects["PLAYER"].direction = "up"
             self.Game.game_objects["PLAYER"].creature.move(self.Game, 0,  1)
-            self.Game.game_objects["PLAYER"].sprite = constants.UP_SPRITES["PLAYER"]
+            #self.Game.game_objects["PLAYER"].sprite = constants.UP_SPRITES["PLAYER"]
             moveFlag = True
         elif symbol == pyg.window.key.DOWN:
             self.Game.game_objects["PLAYER"].direction = "down"
             self.Game.game_objects["PLAYER"].creature.move(self.Game, 0, -1)
-            self.Game.game_objects["PLAYER"].sprite = constants.DOWN_SPRITES["PLAYER"]
+            #self.Game.game_objects["PLAYER"].sprite = constants.DOWN_SPRITES["PLAYER"]
             moveFlag = True
         elif symbol == pyg.window.key.LEFT:
             self.Game.game_objects["PLAYER"].direction = "left"
             self.Game.game_objects["PLAYER"].creature.move(self.Game, -1, 0)
-            self.Game.game_objects["PLAYER"].sprite = constants.LEFT_SPRITES["PLAYER"]
+            #self.Game.game_objects["PLAYER"].sprite = constants.LEFT_SPRITES["PLAYER"]
             moveFlag = True
         elif symbol == pyg.window.key.RIGHT:
             self.Game.game_objects["PLAYER"].direction = "right"
             self.Game.game_objects["PLAYER"].creature.move(self.Game,  1, 0)
-            self.Game.game_objects["PLAYER"].sprite = constants.RIGHT_SPRITES["PLAYER"]
+            #self.Game.game_objects["PLAYER"].sprite = constants.RIGHT_SPRITES["PLAYER"]
             moveFlag = True
         elif symbol == pyg.window.key.C:
             self.cast = True
@@ -123,10 +123,12 @@ class GameWindow(pyg.window.Window):
         elif symbol == pyg.window.key.T:
             if self.Game.game_objects["PLAYER"].creature.mana>0 and self.Game.light_source=="torch":
                 self.Game.light_source = "magic"
+                self.Game.game_objects["PLAYER"].sprite = constants.S_PLAYER_MAGIC
             elif self.Game.game_objects["PLAYER"].creature.mana<1 and self.Game.light_source=="torch":
                 self.Game.game_messages.append(("You are out of mana.", constants.COLOR_WHITE))
             elif self.Game.torch_counter>0 and self.Game.light_source=="magic":
                 self.Game.light_source = "torch"
+                self.Game.game_objects["PLAYER"].sprite = constants.S_PLAYER_TORCH
             elif self.Game.torch_counter<1 and self.Game.light_source=="magic":
                 self.Game.game_messages.append(("Your torch is extinguished.", constants.COLOR_WHITE))
             elif self.Game.torch_counter<1 and self.Game.game_objects["PLAYER"].creature.mana<1:

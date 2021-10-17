@@ -17,10 +17,10 @@ CELL_WIDTH = 32
 CELL_HEIGHT = 32
 
 # Map vars
-MAP_WIDTH = int(100)
-MAP_HEIGHT = int(100)
+MAP_WIDTH = int(150)
+MAP_HEIGHT = int(150)
 
-MAP_BUFFER = 25
+MAP_BUFFER = 50
 GUI_WIDTH = 32*10
 #MAP_HEIGHT = int(30*2)
 
@@ -43,14 +43,14 @@ pyg.resource.add_font("data/DUNGRG.TTF")
 FONT_TITLE = pyg.font.load("Dungeon")
 
 # TORCH SETTINGS
-INIT_MANA = 200
+INIT_MANA = 20
 INIT_HP = 10
 INIT_ATK = 2
-INIT_TORCH_CHARGE = 2000
+INIT_TORCH_CHARGE = 500
 MAGIC_LIGHT_RADIUS = 10
 E_LIGHT_RADIUS = 2
 BASE_TORCH_RADIUS = 9
-MANA_COUNT_THRESH = 10
+MANA_COUNT_THRESH = 500
 TORCH_COUNT_THRESH = 50
 
 # Color definitions
@@ -75,15 +75,18 @@ COLOR_TORCH_MAG_BLEND = (int((COLOR_TORCHLIGHT[0]+COLOR_MAGICLIGHT[0])/2),
 COLOR_DEFAULT_BG = COLOR_BLACK
 
 # Sprites
-#S_PLAYER = pyg.image.load("data/creatures/player_test.png")
-S_PLAYER_LEFT = pyg.resource.image('data/creatures/player_torch_left.png')
-S_PLAYER_RIGHT = pyg.resource.image('data/creatures/player_torch_right.png')
-S_PLAYER_DOWN = pyg.resource.image('data/creatures/player_torch_down.png')
-S_PLAYER_UP = pyg.resource.image('data/creatures/player_torch_up.png')
+S_PLAYER_TORCH = pyg.image.load("data/creatures/player_torch.png")
+S_PLAYER_MAGIC = pyg.image.load("data/creatures/player_magic.png")
+S_PLAYER_MAGICLOW = pyg.image.load("data/creatures/player_magic_low.png")
+#S_PLAYER_LEFT = pyg.resource.image('data/creatures/player_torch_left.png')
+#S_PLAYER_RIGHT = pyg.resource.image('data/creatures/player_torch_right.png')
+#S_PLAYER_DOWN = pyg.resource.image('data/creatures/player_torch_down.png')
+#S_PLAYER_UP = pyg.resource.image('data/creatures/player_torch_up.png')
 
-a_player = [S_PLAYER_LEFT, S_PLAYER_DOWN, S_PLAYER_RIGHT, S_PLAYER_DOWN]
-A_PLAYER = pyg.image.Animation.from_image_sequence(a_player, duration = 1.0, loop=True)
+#sa_player = [S_PLAYER_LEFT, S_PLAYER_DOWN, S_PLAYER_RIGHT, S_PLAYER_DOWN]
+#A_PLAYER = pyg.image.Animation.from_image_sequence(a_player, duration = 1.0, loop=True)
 
+"""
 LEFT_SPRITES = {"PLAYER" : pyg.image.load("data/creatures/player_torch_left.png"),
                 "SKELETON" : pyg.image.load("data/creatures/skeleton_1.png"),
                 "MUMMY" : pyg.image.load("data/creatures/mummy_1.png"),
@@ -106,9 +109,7 @@ UP_SPRITES = {"PLAYER" : pyg.image.load("data/creatures/player_torch_up.png"),
                 "SKELETON" : pyg.image.load("data/creatures/skeleton_1.png"),
                 "MUMMY" : pyg.image.load("data/creatures/mummy_1.png"),
                 "ZOMBIE" : pyg.image.load("data/creatures/zombie_1.png"),
-                "SKULL" : pyg.image.load("data/creatures/glow_skull.png") }
-
-
+                "SKULL" : pyg.image.load("data/creatures/glow_skull.png") } """
 
 # monsters
 MONSTER_SPRITES = {
@@ -124,117 +125,129 @@ MONSTER_SPRITES = {
                 "SKULL_1" : pyg.image.load("data/creatures/glow_skull.png") }
 
 MONSTER_DEATH_SPRITES = {
-                 "PLAYER" : pyg.image.load("data/creatures/player_torch_up.png"),
-                 "SKELETON" : pyg.image.load("data/creatures/skeleton_1.png"),
-                 "MUMMY" : pyg.image.load("data/creatures/mummy_1.png"),
-                 "ZOMBIE" : pyg.image.load("data/creatures/zombie_1.png"),
-                 "SKULL" : pyg.image.load("data/creatures/glow_skull.png") }
+                "PLAYER" : pyg.image.load("data/creatures/player_magic_low.png"),
+                "SKELETON" : pyg.image.load("data/creatures/skeleton_1.png"),
+                "MUMMY" : pyg.image.load("data/creatures/mummy_1.png"),
+                "ZOMBIE" : pyg.image.load("data/creatures/zombie_1.png"),
+                "SKULL" : pyg.image.load("data/creatures/glow_skull.png") }
 
 MONSTER_NAMES = { # display name
                 "PLAYER" : "player",
-              "SKELETON" : "skeleton",
-                 "MUMMY" : "mummy",
+                "SKELETON" : "skeleton",
+                "MUMMY" : "mummy",
                 "ZOMBIE" : "zombie",
-                 "SKULL" : "glowing skull" }
+                "SKULL" : "glowing skull" }
 
 MONSTER_HP = { # max health
-              "SKELETON" : 5,
-                 "MUMMY" : 3,
+                "SKELETON" : 5,
+                "MUMMY" : 3,
                 "ZOMBIE" : 3,
-                 "SKULL" : 1 }
+                "SKULL" : 1 }
 
 MONSTER_INI = { # initiative
-               "SKELETON" : 1,
-                  "MUMMY" : 2,
-                 "ZOMBIE" : 3,
-                  "SKULL" : 1 }
+                "SKELETON" : 1,
+                "MUMMY" : 2,
+                "ZOMBIE" : 3,
+                "SKULL" : 1 }
 
 MONSTER_SPD = { # speed (tiles to jump)
-               "SKELETON" : 1,
-                  "MUMMY" : 2,
-                 "ZOMBIE" : 1,
-                  "SKULL" : 2 }
+                "SKELETON" : 1,
+                "MUMMY" : 2,
+                "ZOMBIE" : 1,
+                "SKULL" : 2 }
 
 MONSTER_ATK = { # attack damage
-               "SKELETON" : 1,
-                  "MUMMY" : 2,
-                 "ZOMBIE" : 3,
-                  "SKULL" : 5 }
+                "SKELETON" : 1,
+                "MUMMY" : 2,
+                "ZOMBIE" : 3,
+                "SKULL" : 5 }
 
 MONSTER_SPELLS = {
-                  "SKELETON" : ["melee", "ranged"],
-                     "MUMMY" : ["melee"],
-                    "ZOMBIE" : ["melee"],
-                     "SKULL" : ["melee"] }
+                "SKELETON" : ["melee", "ranged"],
+                "MUMMY" : ["melee"],
+                "ZOMBIE" : ["melee"],
+                "SKULL" : ["melee"] }
 
 MONSTER_SPELL_WEIGHTS = {
-                        "SKELETON" : [1, 2],
-                           "MUMMY" : [1],
-                          "ZOMBIE" : [1],
-                           "SKULL" : [1] }
+                "SKELETON" : [1, 2],
+                "MUMMY" : [1],
+                "ZOMBIE" : [1],
+                "SKULL" : [1] }
 
 MONSTER_LGT = { # light emission
-               "SKELETON" : 0,
-                  "MUMMY" : 0,
-                 "ZOMBIE" : 0,
-                  "SKULL" : 4 }
+                "SKELETON" : 0,
+                "MUMMY" : 0,
+                "ZOMBIE" : 0,
+                "SKULL" : 2 }
 
 MONSTER_COL = { # light color
-               "SKELETON" : None,
-                  "MUMMY" : None,
-                 "ZOMBIE" : None,
-                  "SKULL" : COLOR_MAGICLIGHT }
+                "SKELETON" : None,
+                "MUMMY" : None,
+                "ZOMBIE" : None,
+                "SKULL" : COLOR_MAGICLIGHT }
 
 # Spells
 SPELL_NAMES = {
-            "FIREBALL" : "fireball" }
+                "FIREBALL" : "fireball" }
 
 SPELL_SPRITES = {
-            "FIREBALL" : pyg.image.load("data/spells/fire.png") }
+                "FIREBALL" : pyg.image.load("data/spells/fire.png") }
 
 SPELL_KEYS = {
-            "FIREBALL" : "F" }
+                "FIREBALL" : "F" }
 
 SPELL_BINDINGS = {
-            "FIREBALL" : pygame.K_f }
+                "FIREBALL" : pygame.K_f }
 
 SPELL_COLORS = {
-            "FIREBALL" : (120, 80, 10) }
+                "FIREBALL" : (120, 80, 10) }
 
 SPELL_LIGHT = {
-            "FIREBALL" : 7 }
+                "FIREBALL" : 7 }
 
 SPELL_EFFECTS = {
-            "FIREBALL" : "fire" }
+                "FIREBALL" : "fire" }
 
 SPELL_PIERCE = {
-            "FIREBALL" : False }
+                "FIREBALL" : False }
 
 SPELL_RANGES = {
-            "FIREBALL" : 5 }
+                "FIREBALL" : 5 }
 
 SPELL_TYPES = {
-            "FIREBALL" : "blast" }
+                "FIREBALL" : "blast" }
 
 SPELL_SIZES = {
-             "FIREBALL" : 3 }
+                "FIREBALL" : 3 }
 
 SPELL_IMPACT_DMG = {
-             "FIREBALL" : 5 }
+                "FIREBALL" : 5 }
 
 SPELL_AOE_DECAY = {
-             "FIREBALL" : 1 }
+                "FIREBALL" : 1 }
 
 SPELL_DURATIONS = {
-             "FIREBALL" : 3 }
+                "FIREBALL" : 3 }
 
 ## LOOT TABLES
-LOOT_TAB_1 = {
-            "FIREBALL" : 1 }
+LOOT_TAB_CHEST1 = {
+                "FIREBALL" : 1 }
 
-LOOT_TAB_MAP = [
-            LOOT_TAB_1
+LOOT_TAB_CHEST2 = {
+                "FIREBALL" : 1 }
+
+LOOT_TAB_MAP_CHEST = [
+                LOOT_TAB_CHEST1,
+                LOOT_TAB_CHEST2
 ]
+
+CONTAINER_SPRITES_CLOSED = {
+                "CHEST1" : pyg.image.load("data/structures/chest_closed.png")
+}
+
+CONTAINER_SPRITES_PILLAGED = {
+                "CHEST1" : pyg.image.load("data/structures/chest_open.png")
+}
 
 
 
